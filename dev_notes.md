@@ -134,15 +134,18 @@ The complete measurements are stored in `exhaustive_results.tsv`.
 - execution failures: 0
 - states at or above 50,000,000 retired instructions: 0
 - worst state: `14325670000000`
-- worst retired instructions: 44,568,672
-- margin below limit: 5,431,328
-- Result: PASS
+- NOTE: the figures in this subsection were from the pre-helper-fix build and are retained only as historical evidence.
+- Superseded worst retired instructions: 44,568,672
+- Superseded margin below limit: 5,431,328
+- Result at that stage: PASS
 
-Report vector `21345671111111` rerun:
+Superseded report-vector measurement before the no-helper fix:
 - exit code: 0
 - retired instructions: 15,820,192
 - cycles: 15,820,192
 - CPI: 1; IPC: 1
+
+Use the authoritative final no-helper measurements below for submission.
 
 ## Correctness Gates H1-H4 (2026-10-03)
 
@@ -186,9 +189,36 @@ Fresh exhaustive run of the final no-helper core is complete and supersedes earl
 - separate vector 21345671111111: 15,820,031 retired instructions, exit code 0
 - final exhaustive performance result: PASS
 
-LED progress:
-- 35x25 MMIO layout works in Ripes.
-- Full-matrix clear is removed from per-move redraw and startup; initial cube is drawn immediately.
-- led_demo_live_optimized.elf uses live solver output on the 3-move demo, applies each returned move, redraws, and validates solved state.
-- RV32_5S CLI live demo: exit 0, 3,297 retired instructions, 4,412 cycles.
-- GUI live-output animation still needs explicit visual confirmation.
+## Target gates and pipeline evidence (2026-10-03)
+
+`target_gates.elf` validates the returned path inside the RV32I target program for solved, one-move, and the required distance-11 report vector.
+- RV32_ISS: exit 0; 15,825,702 retired instructions; 15,825,702 cycles.
+- RV32_5S: exit 0; 15,825,701 retired instructions; 18,437,979 cycles; CPI 1.1650655; IPC 0.8583208; model execution time 38.148 s.
+- T5: PASS for the known target-harness cases because each returned path is applied and checked to reach solved.
+- T6: PASS for `21345671111111`; the solver returns the known optimal distance 11 and the path is validated on target.
+- T7: partially evidenced: the known harness cases pass on RV32_ISS and RV32_5S; the grader-provided state is not yet known and therefore cannot be claimed.
+
+## LED progress (2026-10-04)
+
+- 35x25 MMIO layout and six-color unfolded-net renderer work in Ripes.
+- Golden animation-only reference is preserved as `led_demo_animation_only_GOLDEN_DO_NOT_TOUCH.elf`.
+- Actual-solver 3-move build is preserved as `led_demo_live_from_golden_fixed.elf`; the GUI displayed its initial scrambled cube and continued executing the live solver.
+- A faster GUI evidence build, `led_demo_live_1move_actual_solver.elf`, uses an actual one-move solver result and is currently awaiting final visual confirmation.
+- Do not claim the final LED requirement PASS until the actual-solver GUI animation has been visually confirmed and evidence captured.
+- The current renderer is C compiled to RV32I; strict handwritten-assembly renderer/integration remains a submission gap if the assignment requires the renderer itself to be handwritten.
+
+
+## 2026-10-05 handwritten RV32I core integration checkpoint
+
+Implemented and verified handwritten RV32I helpers: valid, rank_state_parts, pattern3/4 ranking, pattern extraction, pattern quarter update, heuristic_v5, solve_v5 orchestration, and solver_solve public wrapper.
+
+Current search_v5_rv32_o3.S is an audited/transplanted O3 RV32I hot-loop scaffold adapted to call the handwritten heuristic and use exported table/path symbols. It is functionally verified against the C search on legal generated states, but because its instruction scheduling originated from compiler output it must not be described as fully handwritten until manually rewritten/audited to the course's handwritten standard.
+
+Measured integrated RV32_ISS gates:
+- distance-11 report vector {1,0,2,3,4,5,6}, all-zero orientation: PASS, 11 moves, 16,318,025 retired instructions.
+- previous worst-case state 14325670000000: PASS, 11 moves, 45,975,038 retired instructions (< 50,000,000).
+- final O3-integrated sections: .text 4,084 B; .rodata 120,649 B; .sdata 7 B; .sbss 4 B; .bss 4,128 B.
+- static memory gate (.rodata+.sdata+.sbss+.bss) = 124,788 B, leaving 6,284 B below 128 KiB.
+- no __mulsi3/__div/__mod/__udiv/__umod symbols in the GC-linked final integration ELF.
+
+Do not claim the full 2,644 distance-11 exhaustive suite has been rerun on this new assembly integration yet.

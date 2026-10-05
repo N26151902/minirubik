@@ -222,3 +222,65 @@ Measured integrated RV32_ISS gates:
 - no __mulsi3/__div/__mod/__udiv/__umod symbols in the GC-linked final integration ELF.
 
 Do not claim the full 2,644 distance-11 exhaustive suite has been rerun on this new assembly integration yet.
+
+
+## Authoritative handwritten RV32I final (2026-10-06)
+
+This section supersedes the 2026-10-05 O3-scaffold checkpoint for the Phase-1 handwritten solver.
+
+### Final integration
+- Public entry: `solver_solve_rv32`
+- Orchestration: `solve_v5_rv32`
+- Final search: `search_v5_rv32_handwritten_final`
+- Hot pattern updates: `pattern3_quarter_rv32_unrolled` and `pattern4_quarter_rv32_unrolled`
+- `solve_v5_rv32.S` now calls the handwritten final search directly.
+- `search_v5_rv32_o3.S` is retained only as a historical performance/reference implementation and is not linked into the final handwritten ELF.
+
+### Clean-build ISA and symbol audit
+The final ELF was rebuilt from repository sources with `-march=rv32i -mabi=ilp32`.
+- ELF RISC-V attribute: `rv32i2p1`
+- forbidden M-extension instructions found by objdump: 0
+- forbidden multiply/divide/modulo helper symbols found by nm: 0
+- final search symbol present: `search_v5_rv32_handwritten_final`
+- compiler-derived `search_v5_rv32_o3` is absent from the linked final ELF.
+
+### Static-memory gate
+Clean final worst-case ELF sections:
+- `.rodata`: 120,649 B
+- `.sdata`: 23 B
+- `.sbss`: 4 B
+- `.bss`: 4,128 B
+- `.data`: 0 B
+- required static sum: 124,804 B
+- limit: 131,072 B
+- margin: 6,268 B
+- result: PASS
+
+### Ripes RV32_ISS performance
+Clean-build report vector, internal p={1,0,2,3,4,5,6}, all-zero orientation:
+- solution length: 11
+- exit code: 0
+- retired instructions: 17,137,243
+
+Clean-build known worst state `14325670000000`:
+- solution length: 11
+- exit code: 0
+- retired instructions: 48,276,932
+- margin below 50,000,000: 1,723,068
+- result: PASS
+
+### Exhaustive distance-11 verification
+The optimized handwritten search was tested on all 2,644 states in `distance11_states.txt`.
+Evidence: `handwritten_inline_exhaustive_results.tsv` and `handwritten_inline_exhaustive_progress.txt`.
+- states: 2,644 / 2,644
+- failures: 0
+- nonzero exit codes: 0
+- maximum retired instructions in the exhaustive harness: 48,276,943
+- worst state: `14325670000000`
+- margin below 50,000,000: 1,723,057
+- result: PASS
+
+The exhaustive harness has 11 more retired instructions than the standalone clean worst-case harness; both identify the same worst state and both pass the 50M limit.
+
+### Handwritten-status note
+The final search control flow was independently handwritten as an iterative IDA* implementation. The earlier compiler-derived `search_v5_rv32_o3.S` must not be described as the submitted handwritten search.

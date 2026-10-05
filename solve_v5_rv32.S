@@ -46,7 +46,7 @@ solve_v5_rv32:
  addi a2,sp,12; addi a3,sp,16
  addi a4,sp,20; addi a5,sp,24
  addi a6,sp,28; addi a7,sp,32
- call search_v5_rv32_o3
+ call search_v5_rv32_handwritten_final
  li t0,-1
  beq a0,t0,3f
  ble a0,s3,4f

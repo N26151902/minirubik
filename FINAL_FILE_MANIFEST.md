@@ -44,3 +44,13 @@ Recommended to retain in the repository and submit only if the rubric asks for e
 
 ## Important packaging note
 Do not blindly submit every untracked file in the working tree. The repository contains extensive experimental and generated artifacts. Final packaging should follow the assignment's exact required filenames and include only the necessary source plus explicitly requested evidence.
+
+## E. Final arbitrary-input and LED entry points
+- inline_state_rv32.S - handwritten parser for the canonical 14-character assembly-time state.
+- inline_target_main.S - arbitrary-state target harness.
+- start_exit93.S - reliable Ripes exit-code startup.
+- build_inline_target.sh - clean source build for an arbitrary target state.
+- build_inline_led.sh - same arbitrary state path with the LED renderer.
+- led_asm_build_fast/led_renderer_rv32_fast.S - handwritten fast LED renderer.
+- led_asm_build_fast/ripes_led_exports_fast.S - Ripes LED symbol wrapper used for GNU linking.
+- led_asm_build_fast/led_asm_harness.c - animation/control harness; validates final solved state.

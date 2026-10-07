@@ -1,0 +1,43 @@
+Exact BFS built: states=3674160 seconds=1.312
+H1: states=3674160 max_h=8 violations=0 => PASS
+H2 perm max=7 solved=0; ori max=6 solved=0
+H2 pdb4 max=8 solved=0; pdb3a max=7 solved=0; pdb3b max=7 solved=0 => PASS
+H4: not applicable: final PDB arrays use one uint8_t per entry; there is no packed accessor.
+H3 progress 100000/3674160 bad=0
+H3 progress 200000/3674160 bad=0
+H3 progress 300000/3674160 bad=0
+H3 progress 400000/3674160 bad=0
+H3 progress 500000/3674160 bad=0
+H3 progress 600000/3674160 bad=0
+H3 progress 700000/3674160 bad=0
+H3 progress 800000/3674160 bad=0
+H3 progress 900000/3674160 bad=0
+H3 progress 1000000/3674160 bad=0
+H3 progress 1100000/3674160 bad=0
+H3 progress 1200000/3674160 bad=0
+H3 progress 1300000/3674160 bad=0
+H3 progress 1400000/3674160 bad=0
+H3 progress 1500000/3674160 bad=0
+H3 progress 1600000/3674160 bad=0
+H3 progress 1700000/3674160 bad=0
+H3 progress 1800000/3674160 bad=0
+H3 progress 1900000/3674160 bad=0
+H3 progress 2000000/3674160 bad=0
+H3 progress 2100000/3674160 bad=0
+H3 progress 2200000/3674160 bad=0
+H3 progress 2300000/3674160 bad=0
+H3 progress 2400000/3674160 bad=0
+H3 progress 2500000/3674160 bad=0
+H3 progress 2600000/3674160 bad=0
+H3 progress 2700000/3674160 bad=0
+H3 progress 2800000/3674160 bad=0
+H3 progress 2900000/3674160 bad=0
+H3 progress 3000000/3674160 bad=0
+H3 progress 3100000/3674160 bad=0
+H3 progress 3200000/3674160 bad=0
+H3 progress 3300000/3674160 bad=0
+H3 progress 3400000/3674160 bad=0
+H3 progress 3500000/3674160 bad=0
+H3 progress 3600000/3674160 bad=0
+H3: states=3674160 mismatches=0 cpu_seconds=153.476 => PASS
+wall=2:35.04 maxrss=20096KiB

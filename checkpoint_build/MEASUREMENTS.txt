@@ -1,0 +1,26 @@
+RV32I handwritten refinement checkpoints
+Input/report vector: p={1,0,2,3,4,5,6}, o={0,0,0,0,0,0,0}
+Processor: Ripes RV32_ISS
+
+CP1 baseline:
+  search_v5_rv32_handwritten.S + loop-based pattern quarter helpers
+  .text = 3080 B
+  retired = 21950326
+  exit = 0
+
+CP2 unrolled pattern updates:
+  CP1 search with calls switched to pattern3/4_quarter_rv32_unrolled
+  .text = 3244 B
+  retired = 17738811
+  exit = 0
+
+CP3 final:
+  CP2 + hoist permutation/orientation row-base calculations outside quarter-turn loop
+  search_v5_rv32_handwritten_final.S
+  .text = 3244 B
+  retired = 17137243
+  exit = 0
+
+CP1 -> CP2 retired reduction: 4211515 (19.19%); text +164 B.
+CP2 -> CP3 retired reduction: 601568 (3.39%); text unchanged.
+CP1 -> CP3 retired reduction: 4813083 (21.93%); text +164 B.

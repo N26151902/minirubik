@@ -3,3 +3,12 @@
 *.swp
 solver
 mini
+
+# Local RV32/Ripes build artifacts
+*.o
+*.elf
+*.log
+.inline_build/
+final_build/
+final_gui_build/
+squashfs-root/

@@ -284,3 +284,24 @@ The exhaustive harness has 11 more retired instructions than the standalone clea
 
 ### Handwritten-status note
 The final search control flow was independently handwritten as an iterative IDA* implementation. The earlier compiler-derived `search_v5_rv32_o3.S` must not be described as the submitted handwritten search.
+
+## 2026-10-06 final target, GCC-reference, pipeline, and LED audit
+
+- Pure-C final algorithm reference: `solver_ida_core_handwritten_work.c`, GCC 14.2.0, `-O2 -march=rv32i -mabi=ilp32`.
+- GCC final-C report vector: 20,568,913 retired, .text 3,712 B, a0=0.
+- Handwritten final report vector recheck: 17,137,243 retired, .text 3,244 B, a0=0.
+- Handwritten improvement over GCC final-C: -16.68% retired instructions and -12.61% linked .text.
+- Target validation harness applies returned moves and checks solved: solved=0, short=1, 21345671111111=11.
+- RV32_ISS validation: a0=0, 17,146,505 retired.
+- RV32_5S validation: a0=0, 17,146,504 retired, 22,026,276 cycles, CPI 1.28459.
+- Final LED demo: `led_asm_build_fast/fixed_5move_d2000.elf`, handwritten RV32I renderer, actual solver moves, five-move scramble, a0=0, 178,969 retired on RV32_ISS.
+- LED static gate: .data+.bss+.rodata=124,912 B; PASS by 6,160 B.
+
+
+## 2026-10-07 reliable distance-11 audit
+
+A new ecall-93 verification sweep ran the final handwritten solver on all 2,644 distance-11 states. Result: 2,644 / 2,644 completed, failures = 0, maximum retired instructions = 48,276,943, worst state = 14325670000000, margin to 50,000,000 = 1,723,057. The separate three-case target validation also exits with real code 0 on RV32_ISS.
+
+## 2026-10-07 arbitrary inline-state input
+
+Added inline_state_rv32.S, inline_target_main.S, build_inline_target.sh, and build_inline_led.sh for arbitrary 14-character assembly-time input. RV32_ISS: 21345671111111 -> exit 0, 17,137,363 retired; 25416373331111 -> exit 0, 2,704,769; worst canonical 14325671111111 -> exit 0, 48,277,063. RV32_5S one-move 25314672313211 -> exit 0, 3,737 retired, 4,902 cycles. Inline LED five-move 74523162333332 -> exit 0, solver count 5.

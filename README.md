@@ -1,226 +1,82 @@
-# minirubik
+# CA2026 HW1 — Memory-Bounded Optimal MiniRubik Solver
 
-An optimal C99 solver for the 2×2×2 Rubik’s Cube. It builds a breadth-first
-table for all 3,674,160 states and solves every valid position in at most 11
-half-turn-metric moves.
+This repository contains the Phase 1 implementation for the CA2026 MiniRubik assignment. The final target solver is handwritten RV32I and uses iterative IDA* with five admissible lower bounds. Host-side programs are used only to generate/verify data and to establish exact BFS reference distances.
 
-## Why a cube is a graph
+## Final measured results
 
-Ernő Rubik created the original cube in 1974 to demonstrate how parts can move
-independently without breaking the whole. A 3×3 cube has 20 moving pieces and
-about 4.3 × 10¹⁹ reachable arrangements. The smaller 2×2 cube keeps the eight
-corners and removes the edges and fixed centers. [Philo Li’s formula-free
-introduction](https://philoli.com/zh/blog/solve-rubiks-cube-without-formulas/)
-offers the key intuition: every turn is reversible, turns can be composed, and
-their order matters—`R U` is generally not `U R`.
+| Item | Result |
+|---|---:|
+| Reachable states | 3,674,160 |
+| HTM diameter | 11 |
+| `.data + .bss + .rodata` (official measured solver core) | 124,777 B |
+| Required vector `21345671111111` | 17,137,243 retired instructions |
+| Exhaustive distance-11 maximum | 48,276,943 retired instructions |
+| Distance-11 states checked | 2,644 / 2,644 PASS |
+| Final handwritten `.text` | 3,244 B |
 
-Human solvers use those facts to move a few pieces while restoring the rest;
-the commutator `A B A⁻¹ B⁻¹` is the standard example. This program uses the
-same group structure differently: it treats every valid arrangement as a node,
-every face turn as an edge, and searches the entire graph once. It does not use
-the article’s 3×3 Roux stages or a library of memorized algorithms.
+The reorganized arbitrary-input build is also within the 128 KiB gate (124,846 B including the inline input string/parser data). The exhaustive maximum is below the 50,000,000-instruction gate. See `benchmarks/` and `docs/HANDWRITTEN_FINAL_REPORT.md` for the measurement context.
 
-The solver gives the eight corner positions the numbers `0–7`. The 2.5D
-walkthrough below shows where those numbers are on the physical cube.
+## Repository layout
 
-## How it works
+- `src/solver/` — final handwritten RV32I solver and hot-path helpers.
+- `src/input/` — assembly-time 14-character state parser and bare-metal entry.
+- `src/led/` — Ripes 35x25 LED Matrix renderer.
+- `reference/` — C reference/baseline implementations and constant table data linked by the RV32I solver.
+- `tables/` — generated table artifacts kept separately from executable search logic.
+- `tests/` — target validation, host correctness gates, and renderer tests.
+- `scripts/` — reproducible target/LED build and exhaustive-test scripts.
+- `benchmarks/` — retained measurement evidence.
+- `docs/` — final report, HackMD draft, checklist, and development notes.
+- `tools/` — host-side generators/analysis utilities.
+- `archive/` — historical checkpoints retained for development traceability; these are not the final implementation.
 
-1. Fix one corner to remove whole-cube rotations.
-2. Rank the remaining corner permutation and six independent orientations into
-   a dense integer.
-3. Breadth-first search outward from solved using `R`, `B`, and `D`, including
-   inverse and half turns.
-4. Store one move toward solved for every state; following those moves gives an
-   optimal solution of at most 11 moves.
+## Final implementation
 
-## Build and run
+The final search path is:
 
-```sh
-make
-make check
-make prove   # optional: Frama-C WP proof, needs frama-c and alt-ergo
-./solver 21345671111111
-```
+`solver_solve_rv32 -> solve_v5_rv32 -> heuristic_v5_rv32 -> search_v5_rv32_handwritten_final`
 
-`make` builds two binaries. `solver` is the documented one, with contracts, a
-`--self-test` mode, and diagnostics on stderr. `mini` is a golfed variant that
-solves the same input and prints the same line, kept as a readability contrast;
-it has no `--self-test` and prints nothing on failure, and it trades roughly
-eight times the runtime and three times the memory for its brevity.
+The search is iterative IDA* (no recursion and no heap allocation). Its heuristic is the maximum of permutation, orientation, one 4-cubie pattern database, and two 3-cubie pattern databases. The maximum remains admissible, while the pattern abstractions capture position/orientation coupling that separate permutation/orientation abstractions can miss.
 
-The 14-digit argument describes the scramble and the printed line is the
-solution. Both formats are explained below.
+The full 3,674,160-state distance table is **not** linked into the target. Exact BFS is used only on the host as a correctness oracle.
 
-### Reading the 14-digit input
+## Build an arbitrary target state
 
-The program receives one 14-digit code with no spaces. For explanation, split
-it into two groups:
-
-```diagram
-2134567 1111111
-└── P ─┘ └── O ─┘
-  cubies   twists
-```
-
-Imagine seven numbered seats and seven students. A position is a seat fixed in
-space; a cubie is the physical corner that can move to another seat. In the
-solved cube, cubie 1 sits in position 1, cubie 2 in position 2, and so on.
-The real cube has no printed numbers; `0–7` are labels used only by this solver.
-
-#### Step 1: Hold the cube in one direction
-
-Keep `FRONT` facing you and `UP` pointing upward. Position `0` is the corner
-nearest the upper-left of the front face. It is an anchor for describing the
-other corners; the physical cubie is not glued in place.
-
-```diagram
-                              BACK
-                    ·───────────────·
-                   ╱               ╱│
-                  ╱        UP     ╱ │
-                 ╱               ╱  │
-              [0]───────────────·   │
-               │                │   │
-               │     FRONT      │ R │
-               │                │   ·
-               │                │  ╱
-               │                │ ╱
-               │                │╱
-               ·────────────────·
-```
-
-`R` marks the narrow `RIGHT` face.
-
-#### Step 2: Separate the front and back layers
-
-A 2×2×2 cube has only corner cubies. Looking from the fixed direction, four
-corner positions touch the front face and four touch the back face. Each
-bracketed number below names one whole corner, not one colored sticker:
-
-```diagram
- FRONT LAYER                          BACK LAYER
-
- upper-left   upper-right             upper-left   upper-right
-     [0]────────[1]                       [7]────────[4]
-      │          │                         │          │
-      │          │       front ↔ back      │          │
-     [3]────────[2]                       [6]────────[5]
- down-left    down-right               down-left    down-right
-```
-
-The front layer runs clockwise from its upper-left corner as `0, 1, 2, 3`.
-The back layer is drawn as if seen through the cube from the front: `7` is
-upper-left, followed clockwise by `4, 5, 6`.
-
-#### Step 3: Join the two layers into positions 0–7
-
-Slide the back square up and to the right, the same direction the cube recedes
-in Step 1, to get the complete 2.5D position map. The back edges are drawn
-through the front face rather than hidden behind it:
-
-```diagram
-                           BACK
-                      [7]────────[4]
-                     ╱ │        ╱ │
-                  [0]──│─────[1]  │
-                   │   │      │   │
-                   │  [6]─────│──[5]
-                   │ ╱        │ ╱
-                  [3]────────[2]
-                      FRONT
-```
-
-The seven characters of `P` describe positions `1, 2, 3, 4, 5, 6, 7` in that
-order; the anchor at position `0` is left out.
-
-#### Step 4: Put the cubies into those positions
-
-Compare the position map on the left with the filled cube on the right. Read
-`P = 2134567` from left to right to fill the positions. The arrows below the
-figure identify the two positions that change.
-
-```diagram
- POSITION MAP                             AFTER P = 2134567
- (fixed seats)                            (cubies now in seats)
-
-     [7]────────[4]                           [7]────────[4]
-    ╱ │        ╱ │                           ╱ │        ╱ │
- [0]──│─────[1]  │                        [0]──│─────[2]  │
-  │   │      │   │                         │   │      │   │
-  │  [6]─────│──[5]                        │  [6]─────│──[5]
-  │ ╱        │ ╱                           │ ╱        │ ╱
- [3]────────[2]                           [3]────────[1]
-     FRONT                                    FRONT
-
- position:     1 2 3 4 5 6 7
- P says:       2 1 3 4 5 6 7
-               │ │ └───────── cubies 3–7 stay in their matching seats
-               │ └─────────── put cubie 1 in position 2: [2] becomes [1]
-               └───────────── put cubie 2 in position 1: [1] becomes [2]
-```
-
-So the first two digits, `21`, exchange the two corners on the front-right
-edge. The remaining digits, `34567`, leave the other five movable corners
-where they were. `P` must contain every digit from `1` through `7` exactly
-once; otherwise a cubie would be missing or duplicated.
-
-The seven seats named by `P` are:
-
-| Position | Corner of the cube |
-| :---: | :--- |
-| 1 | front, upper, right |
-| 2 | front, down, right |
-| 3 | front, down, left |
-| 4 | back, upper, right |
-| 5 | back, down, right |
-| 6 | back, down, left |
-| 7 | back, upper, left |
-
-The second group, `O = 1111111`, describes the twist of the cubie in each of
-those same seven positions:
-
-| Digit | Meaning |
-| :---: | :--- |
-| 1 | not twisted |
-| 2 | twisted by +120° |
-| 3 | twisted by −120° |
-
-Here every orientation digit is `1`, so the two corners change places without
-being twisted. For a valid cube, convert orientation digits to `0`, `1`, and
-`2`; their sum must be divisible by three. The solved code is
-`12345671111111`. `make check` uses the exchanged-corner example above.
-
-## Reading the solution
+The canonical input is seven permutation digits (`1..7`) followed by seven orientation digits (`1..3`). For example:
 
 ```sh
-$ ./solver 21345671111111
-B' R' D2 R' B R B' R D2 B R'
+./build_inline_target.sh 21345671111111
 ```
 
-Each token is one face turn. Apply them left to right; after the last one the
-cube is solved.
+The top-level wrapper calls `scripts/build_inline_target.sh` and produces `inline_target.elf`.
 
-| Token | Meaning |
-| :---: | :--- |
-| `R` | turn the `RIGHT` face 90° clockwise |
-| `B` | turn the `BACK` face 90° clockwise |
-| `D` | turn the `DOWN` face 90° clockwise |
+For the LED visualization:
 
-Clockwise means clockwise as seen by someone looking directly at that face from
-outside the cube, so you have to walk around to the back to read `B` and look up
-from underneath to read `D`. Two suffixes modify a turn:
+```sh
+./build_inline_led.sh 74523162333332 2000
+```
 
-| Suffix | Meaning |
-| :---: | :--- |
-| none | 90° clockwise |
-| `'` | 90° counterclockwise, the inverse |
-| `2` | 180°, direction does not matter |
+This produces `inline_led.elf`. The renderer is intentionally excluded from official solver-performance measurements.
 
-`R`, `B`, and `D` are the only faces that appear, because turning `UP`, `FRONT`,
-or `LEFT` would move the anchor at position `0`. A turn counts as one move
-whichever suffix it carries, which is the half-turn metric; under that metric no
-position needs more than 11 moves. Solving an already-solved cube prints an
-empty line.
+## Correctness evidence
 
-See [`report.md`](report.md) for the model, algorithm, diagrams, and Frama-C
-validation notes.
+Host verification established:
+
+- H1: all 3,674,160 reachable states satisfy `h(s) <= d_BFS(s)`.
+- H2: all heuristic tables are populated and have the solved entry equal to zero.
+- H3: IDA* solution length equals the exact BFS distance for all 3,674,160 states.
+- Distance-11 target sweep: 2,644 / 2,644 states passed with a worst case of 48,276,943 retired instructions.
+
+See `benchmarks/HOST_GATES_RESULTS.txt` and `benchmarks/handwritten_reliable_progress.txt`.
+
+## RV32I and LED
+
+The final target is built for `-march=rv32i -mabi=ilp32`; the final audit contains no multiply/divide compiler helpers. The LED renderer uses the Ripes LED Matrix symbols and writes one 32-bit RGB word per pixel in row-major order. The GUI renderer and official CLI performance build share the same solver; only the renderer path differs.
+
+## Historical files
+
+Files under `archive/` are deliberately retained so optimization steps can be inspected. In particular, compiler-derived and earlier handwritten search versions are **references only**. The final search implementation is `src/solver/search_v5_rv32_handwritten_final.S`.
+
+## Documentation
+
+Start with `docs/HANDWRITTEN_FINAL_REPORT.md` for the concise technical report and `docs/PHASE1_HACKMD_DRAFT.md` for the submission-note draft. `docs/dev_notes.md` records development history and measurements.

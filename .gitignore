@@ -12,3 +12,6 @@ mini
 final_build/
 final_gui_build/
 squashfs-root/
+
+# Local experiment executables / scratch outputs
+*.out

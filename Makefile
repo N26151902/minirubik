@@ -3,7 +3,7 @@ CFLAGS ?= -O3 -std=c99 -Wall -Wextra -Wpedantic
 FRAMA_C ?= frama-c
 CLANG_FORMAT := $(shell command -v clang-format-20 2>/dev/null || \
 	command -v clang-format 2>/dev/null)
-C_SOURCES := $(wildcard *.c *.h)
+C_SOURCES := $(wildcard reference/*.c reference/*.h)
 SAMPLE_STATE := 21345671111111
 SAMPLE_SOLUTION := B' R' D2 R' B R B' R D2 B R'
 VECTORS := tests/solutions.txt
@@ -16,10 +16,10 @@ INVALID_STATES := 1234567111111 123456711111111 02345671111111 82345671111111 \
 
 all: solver mini
 
-solver: solver.c
+solver: reference/solver.c
 	$(CC) $(CFLAGS) $< -o $@
 
-mini: mini.c
+mini: reference/mini.c
 	$(CC) $(CFLAGS) $< -o $@
 
 check: solver mini $(VECTORS)
@@ -75,11 +75,11 @@ $$(wc -c <"$$actual") produced)"; exit 1; }; \
 			exit 1; }
 	@echo "invalid input rejected with status 2, unwritable stdout with status 1"
 
-prove: solver.c
+prove: reference/solver.c
 	@log=$$(mktemp); trap 'rm -f "$$log"' 0 1 2 15; \
 		$(FRAMA_C) -wp -wp-fct quarter_turn,rank_state,valid,parse_state \
 		-wp-rte -rte-verbose 0 -wp-prover alt-ergo -wp-timeout 20 \
-		-wp-cache none solver.c >"$$log" 2>&1; rc=$$?; \
+		-wp-cache none reference/solver.c >"$$log" 2>&1; rc=$$?; \
 		grep -Fvx -e '[wp] Warning: Skipped RTE guards: unaligned pointers (\aligned not supported)' \
 		-e '[wp] Warning: Skipped RTE guards: invalid function pointer calls (\valid_function not supported)' "$$log"; \
 		test $$rc -eq 0 && awk '$$1 == "[wp]" && $$2 == "Proved" && $$3 == "goals:" && $$4 > 0 && $$4 == $$6 { ok = 1 } END { exit !ok }' "$$log" && \

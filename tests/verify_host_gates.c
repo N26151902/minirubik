@@ -6,6 +6,15 @@
 
 #include "solver_ida_core_v5.c"
 
+/* Full-state rank in the same layout unrank_state() decodes:
+ * permutation rank * 729 + orientation rank. */
+static uint32_t rank_state(const state_t *s)
+{
+    uint16_t perm, orient;
+    rank_state_parts(s, &perm, &orient);
+    return (uint32_t) perm * ORIENTATIONS + orient;
+}
+
 static uint8_t *exact_dist;
 static uint32_t *queue_rank;
 

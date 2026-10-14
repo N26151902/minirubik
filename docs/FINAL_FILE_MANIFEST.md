@@ -9,17 +9,15 @@
 - `src/solver/rank_state_parts_rv32.S` — permutation/orientation ranks.
 - `src/solver/pattern_rank_rv32.S` — pattern ranks.
 - `src/solver/pattern_extract_rv32.S` — pattern extraction.
-- `src/solver/pattern_quarter_rv32_unrolled.S` — optimized pattern transitions.
-- `src/solver/pattern_quarter_rv32.S` — retained table-anchor/reference transition implementation required by the final link.
+- `src/solver/pattern_quarter_rv32_unrolled.S` — optimized pattern transitions and their `pattern_tables_anchor` table.
 - `reference/solver_ida_core_handwritten_work.c` — constant transition/PDB data used by the assembly implementation.
 
 ## Input and visualization
-- `src/input/inline_state_rv32.S` — canonical 14-character assembly-time input parser.
-- `src/input/inline_target_main.S` — arbitrary-state target harness.
+- `src/input/inline_state_rv32.S` — canonical 14-character assembly-time input and its RV32I parser.
+- `src/input/inline_target_main.S` — single-source RV32I driver: solve, in-program path verification, optional ecall printout, built-in self-test table, and the LED animation behind `.if RENDER`.
 - `src/input/start_exit93.S` — reliable bare-metal Ripes exit path.
 - `src/led/led_renderer_rv32_fast.S` — final handwritten LED renderer.
 - `src/led/ripes_led_exports_fast.S` — Ripes LED symbol wrapper.
-- `tests/led_asm_harness.c` — animation/control harness.
 
 ## Reproduction
 - `build_inline_target.sh` — convenience wrapper for `scripts/build_inline_target.sh`.
@@ -40,7 +38,8 @@
 ## Reference / historical material
 - `reference/solver.c` and `reference/mini.c` — original/reference host programs.
 - `reference/solver_ida_core_v5.c` — C algorithm reference.
-- `archive/old_search/` — earlier handwritten/compiler-derived search checkpoints; not final.
+- `archive/old_search/` — earlier handwritten/compiler-derived search checkpoints (including the loop-based `pattern_quarter_rv32.S` of CP1); not final.
+- `archive/old_harnesses/led_asm_harness.c` — former C driver for the LED build, replaced by the assembly driver.
 - `archive/old_harnesses/` and `archive/old_results/` — superseded measurement material retained for traceability.
 
 Generated `.o`, `.elf`, `.log`, `.inline_build/`, `final_build/`, and GUI build directories are local artifacts and are not part of the final source layout.

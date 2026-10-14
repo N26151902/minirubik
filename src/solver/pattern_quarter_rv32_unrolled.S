@@ -101,3 +101,16 @@ pattern4_quarter_rv32_unrolled:
  addi t1,t1,-3
 7: sb t1,3(a1)
  ret
+
+# Corner-pattern transition table used above: for face f, destination of a
+# cubie at position q is at pattern_tables_anchor + 7f + q, and the twist it
+# picks up is 24 bytes further (destination block padded to 24 bytes).
+# (Moved here from the retired loop-based pattern_quarter_rv32.S, which also
+# carried an unreferenced 780-byte o3_pattern_anchor copy.)
+.section .rodata
+.align 3
+.globl pattern_tables_anchor
+pattern_tables_anchor:
+.byte 3,0,2,4,1,5,6, 0,1,2,6,3,4,5, 0,4,1,3,5,2,6
+.zero 3
+.byte 1,2,0,2,1,0,0, 0,0,0,1,2,1,2, 0,0,0,0,0,0,0

@@ -45,18 +45,25 @@ The full 3,674,160-state distance table is **not** linked into the target. Exact
 The canonical input is seven permutation digits (`1..7`) followed by seven orientation digits (`1..3`). For example:
 
 ```sh
-./build_inline_target.sh 21345671111111
+./build_inline_target.sh 21345671111111                 # -> inline_target.elf
+EXPECT_LEN=auto ./build_inline_target.sh 14325671111111 # also require the host BFS distance
+SELFTEST=1 ./build_inline_target.sh                     # built-in test table
+./build_inline_led.sh 74523162333332 2000               # -> inline_led.elf (LED GUI build)
 ```
 
-The top-level wrapper calls `scripts/build_inline_target.sh` and produces `inline_target.elf`.
+Every build comes from the same assembly driver, `src/input/inline_target_main.S`. Assemble-time switches (`.equ` defaults overridden with `--defsym`) select the variant:
 
-For the LED visualization:
+| Switch | Default | Effect |
+|---|---|---|
+| `RENDER` | 0 | 1 = draw the cube net on the 35x25 LED matrix and redraw after every quarter turn of the solver's output. The RENDER=0 and RENDER=1 builds differ only in the `.if RENDER` blocks. |
+| `PRINT` | 1 | print `state …: N moves: … PASS` through Ripes ecalls (`a7 = 1, 4, 11`). |
+| `SELFTEST` | 0 | 1 = run the built-in table: solved (0), short scramble (1), distance 5, 8, 9, 10, and the report vector (11). |
+| `EXPECT_LEN` | unset | require exactly this solution length (`auto` asks the host `./solver`). |
+| `LED_DELAY` | 2000 | busy-wait iterations per LED frame. |
 
-```sh
-./build_inline_led.sh 74523162333332 2000
-```
+The program validates every result itself: the path must have at most 11 moves (and `EXPECT_LEN` moves when given), every move id must be in range, and applying the path to an independent copy of the input with the `source[]`/`twist[]` corner model must reach the solved state. The exit code (`ecall 93`) is 0 on success; non-zero codes are listed at the top of the driver.
 
-This produces `inline_led.elf`. The renderer is intentionally excluded from official solver-performance measurements.
+Measure in the CLI with, e.g., `Ripes --mode cli --src inline_target.elf -t elf --proc RV32_ISS --iret --runinfo`. The renderer cannot be measured this way; the LED build is for the GUI only.
 
 ## Correctness evidence
 

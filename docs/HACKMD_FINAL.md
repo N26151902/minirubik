@@ -499,4 +499,12 @@ RIPES=/path/to/Ripes scripts/exhaustive_handwritten_reliable.sh
 
 AI tools were used for code assistance, debugging, experiment planning, optimization suggestions, test construction, documentation drafting and review. After Phase 1, an AI assistant reviewed the repository and proposed the changes listed under "Changes After the Phase 1 Submission"; I reviewed each change, and every instruction count, size and memory figure in this note was measured by me in Ripes `v2.2.6-106-g5b8a616` on my own machine.
 
-**TODO: add one example each of an AI suggestion you accepted, modified and rejected, and why.**
+Three decisions show how AI output was handled. Each is recorded in `docs/dev_notes.md`.
+
+**Accepted — unrolling the pattern updates (CP1 → CP2).** The suggestion was to replace the loop in the 3- and 4-cubie pattern quarter-turn with straight-line code. I accepted it after measuring it: retired instructions fell from 21,950,326 to 17,738,811 (−19.19%) for 164 B more `.text`, and H3 still passed on all states. The cost is small and the hot path runs once per child of every expanded node, so the trade was clear.
+
+**Modified — removing the hidden division helpers.** An AI-assisted C core passed every functional test, but a symbol audit I ran afterwards (`nm` on the linked ELF) found `__udivsi3` and `__umodsi3` from libgcc. There were no M-extension opcodes, so the ISA check alone did not catch it, yet the assignment forbids these helpers. I did not keep the AI's version as it was: I restructured the core to keep the permutation and orientation ranks separate and to check the orientation sum without `%`, so the division disappeared instead of being reimplemented. The static data went down to 123,948 B, and the full 2,644-state sweep was rerun on the rebuilt core.
+
+**Rejected — the compiler-derived search loop.** One AI-assisted step transplanted GCC `-O3` output for the search hot loop (`search_v5_rv32_o3.S`). It was functionally correct and faster than my first handwritten version (16,318,025 retired instructions on the report vector). I rejected it as the final search because its instruction scheduling came from the compiler, and the assignment requires handwritten assembly that beats GCC rather than reuses it. I rewrote the search by hand (`search_v5_rv32_handwritten_final.S`), measured it against a real GCC `-O2` build of the same C algorithm (17,137,243 vs 20,568,913), and kept the `-O3` file only in `archive/old_search/` as a reference.
+
+In this final round, I also did not use the AI's own simulator counts as results: the AI ran the builds on its own RV32I simulator, and I re-measured every figure in Ripes on my machine before putting it in this note.

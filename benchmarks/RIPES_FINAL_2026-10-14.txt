@@ -1,0 +1,24 @@
+Ripes v2.2.6-106-g5b8a616, riscv64-unknown-elf-gcc 14.2.0, commit 049d240
+Measured on EddyUbuntu, 2026-10-14.
+
+Arbitrary-input build, PRINT=0 (.text 3784, .rodata 119888, .sdata 7, .sbss 4, .bss 4192)
+  21345671111111            RV32_ISS  retired 17142511  exit 0
+  14325671111111 (EXPECT_LEN=11) RV32_ISS  retired 48282220  exit 0
+SELFTEST=1, PRINT=0 (7 cases: 0,1,5,8,9,10,11 moves)
+  RV32_ISS  retired 21997698  cycles 21997698  exit 0
+  RV32_5S   retired 21997697  cycles 28252404  exit 0
+SELFTEST=1, PRINT=1 output
+  state 12345671111111: 0 moves:  PASS
+  state 25314672313211: 1 moves: R'  PASS
+  state 74523162333332: 5 moves: B' R2 D B' R'  PASS
+  state 62345713133111: 8 moves: R2 D B2 R' D R' D B'  PASS
+  state 24513763133333: 9 moves: B' R2 B' R B2 D' R' D2 R'  PASS
+  state 25416373331111: 10 moves: R2 D R B2 R D' R D R' B2  PASS
+  state 21345671111111: 11 moves: R B' D2 R' B R' B' R D2 R B  PASS
+Solver-only gate build (archive/old_harnesses/report_vector_harness.c)
+  .text 3244  .rodata 119821  .bss 4128  -> static 123949
+  RV32_ISS  retired 17137243  exit 0
+Host memory per guest byte (/usr/bin/time -f %M, Ripes CLI, RV32_ISS)
+  memory_control.S (64 KiB)  maxrss 35796 KiB
+  memory_large.S   (4 MiB)   maxrss 210824 KiB
+  slope = (210824-35796)*1024 / (4194304-65536) = 43.4 host B / guest B

@@ -78,21 +78,20 @@ VSRTL stores guest memory in `std::unordered_map<VSRTL_VT_U, uint8_t>`: one hash
 
 My first measurement wrote 32 KiB and 64 KiB and compared Ripes' high-water mark, which gave 3.1–3.9 host bytes per guest byte. That result is not credible. One libstdc++ hash node holds a next pointer, an 8-byte key and a 1-byte value (24 B, a 32 B allocation), plus about 8 B of bucket array, so the floor is about 40 B per guest byte. Regions of 32–64 KiB are also small compared with the noise in a GUI process's peak memory.
 
-I repeated the measurement with a large region against a small control, writing a non-zero word to every slot (`benchmarks/memory_large.S`, 4 MiB; `benchmarks/memory_control.S`, 64 KiB). Measuring the same container type with the same insertion pattern in isolation:
+I repeated the measurement with a large region against a small control, writing a non-zero word to every slot (`benchmarks/memory_large.S`, 4 MiB; `benchmarks/memory_control.S`, 64 KiB), and recorded the peak RSS of the Ripes CLI process with `/usr/bin/time -f %M` on `RV32_ISS`:
 
-| Guest bytes written | Peak RSS (KiB) |
-|---:|---:|
-| 65,536 | 6,184 |
-| 4,194,304 | 181,168 |
-| 16,777,216 | 720,012 |
+| Program | Guest bytes written | Ripes peak RSS (KiB) |
+|---|---:|---:|
+| `memory_control.S` | 65,536 | 35,796 |
+| `memory_large.S` | 4,194,304 | 210,824 |
 
 $$
-\text{slope} = \frac{(181{,}168 - 6{,}184) \times 1024}{4{,}194{,}304 - 65{,}536} \approx 43.4\ \text{host B per guest B}
+\text{slope} = \frac{(210{,}824 - 35{,}796) \times 1024}{4{,}194{,}304 - 65{,}536} \approx 43.4\ \text{host B per guest B}
 $$
 
-(43.7 at 16 MiB). At that slope the baseline's 18,405,414-byte peak would cost about 800 MB of host memory.
+The control absorbs Ripes' fixed cost (about 35 MB), so the difference isolates the per-byte cost. As an independent check, inserting the same keys into a bare `std::unordered_map<uint64_t, uint8_t>` gives the same slope (43.4 B/B at 4 MiB, 43.7 B/B at 16 MiB), so almost all of it is the hash map itself.
 
-> Ripes-process measurement with the same two programs on my installation: **TODO: fill in before submitting.**
+At that slope the baseline's 18,405,414-byte peak would cost about 800 MB of host memory, on top of the roughly $10^9$ instructions needed to build the table.
 
 ## 4. Ripes Instruction Throughput
 
@@ -211,7 +210,14 @@ The built-in test table (`SELFTEST=1`) contains my own test cases:
 | `25416373331111` | independent state | 10 | PASS |
 | `21345671111111` | report vector | 11 | PASS |
 
-The whole table runs in 21,997,698 retired instructions on `RV32_ISS` (exit code 0, `PRINT=0`). For T7, the same cases are also run on the visual `RV32_5S` model (exit code 0).
+For T7, the same program was run on both models (`PRINT=0`):
+
+| Processor | Retired | Cycles | CPI | Exit |
+|---|---:|---:|---:|---:|
+| `RV32_ISS` | 21,997,698 | 21,997,698 | 1.00 | 0 |
+| `RV32_5S` | 21,997,697 | 28,252,404 | 1.28 | 0 |
+
+The extra 28% of cycles on `RV32_5S` are pipeline stalls and branch flushes; the search is branch-heavy.
 
 ---
 
@@ -476,7 +482,7 @@ The solver itself (search, heuristic, tables) is unchanged, so the solver-call i
 
 - Repository: https://github.com/N26151902/minirubik
 - Forked from upstream `sysprog21/minirubik` at commit `231796c`.
-- Final commit: **TODO: commit hash after push**
+- Final commit: `049d240` (code); later commits only update this note and its evidence
 - Ripes `v2.2.6-106-g5b8a616`, `RV32_ISS` for counts, `RV32_5S` for the pipeline.
 
 ```bash
@@ -491,6 +497,6 @@ RIPES=/path/to/Ripes scripts/exhaustive_handwritten_reliable.sh
 
 # AI Disclosure
 
-AI tools were used for code assistance, debugging, experiment planning, optimization suggestions, test construction, documentation drafting and review. After Phase 1, an AI assistant reviewed the repository and proposed the changes listed under "Changes After the Phase 1 Submission"; I reviewed each change, and the measurements reported here were checked by running the builds in Ripes.
+AI tools were used for code assistance, debugging, experiment planning, optimization suggestions, test construction, documentation drafting and review. After Phase 1, an AI assistant reviewed the repository and proposed the changes listed under "Changes After the Phase 1 Submission"; I reviewed each change, and every instruction count, size and memory figure in this note was measured by me in Ripes `v2.2.6-106-g5b8a616` on my own machine.
 
 **TODO: add one example each of an AI suggestion you accepted, modified and rejected, and why.**

@@ -153,6 +153,17 @@ The 128 KiB budget is what limits the abstraction sizes. After the transition ta
 
 # Stage 3 — C Optimization and Correctness Verification
 
+## 8a. Removing What RV32I Cannot Do Cheaply
+
+Before translating, I changed the C search (`search_v5` in `reference/solver_ida_core_v5.c`) so the hot path has no operation that RV32I would need a multiply, a divide or a helper routine for:
+
+1. **No divide or modulo by 3 in the search.** The baseline decodes a move id with `move / 3` (face) and `move % 3` (turn count). The search instead loops over the face and the turn count directly, and builds the move id for the path as `(face << 1) + face + turn`. The `% 3` / `/ 3` that remain in the file are in host-only helpers (`apply_move`, `unrank_state`) used by the verifier, not in the target path.
+2. **Same-face pruning.** A move on the same face as the previous move either cancels it or merges with it into a single move, so it can never be part of a shortest path. The search skips that face (`face == previous_face`), so after the first move only 6 of the 9 moves are tried.
+3. **Separate ranks instead of a combined rank.** Keeping the permutation rank and the orientation rank separate avoids `p * 729 + o` and the matching `/ 729` and `% 729`, and lets each transition be a single table lookup.
+4. **Orientation sum without `%`.** The validity check reduces the orientation sum by conditional subtraction instead of `% 3`. An earlier version still linked `__udivsi3` / `__umodsi3` from libgcc; this change removed them.
+
+Effect from operation counts: pruning cuts the branching factor from 9 to 6 below the root, so a depth-$d$ tree has about $9 \cdot 6^{d-1}$ leaves instead of $9^d$ — a factor of $1.5^{d-1}$, about 58× at depth 11. Removing the divides takes a `__udivsi3` call — a software shift-and-subtract loop on RV32I — out of every move applied.
+
 ## 9. Exhaustive Host-Side Verification
 
 The host verifier `tests/verify_host_gates.c` builds the exact BFS table over all 3,674,160 states and checks the heuristic and the search against it.

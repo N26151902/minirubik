@@ -186,6 +186,16 @@ $h(s) \le h^*(s)$ for every reachable state. **H1: PASS**
 | 3-cubie PDB A | 7 | 0 |
 | 3-cubie PDB B | 7 | 0 |
 
+A maximum and a solved entry do not prove that every entry was filled, so I also checked completeness directly (`tools/verify_pdb_tables.c`). It enumerates every abstract state — every ordered placement of the tracked cubies times every orientation, $7 \cdot 6 \cdot 5 \cdot 4 \cdot 3^4 = 68{,}040$ for the 4-cubie pattern and $7 \cdot 6 \cdot 5 \cdot 3^3 = 5{,}670$ for each 3-cubie pattern — checks that the solver's rank function maps them one-to-one onto the table indices, then reruns a BFS from the solved pattern with the solver's own quarter-turn function and compares every entry:
+
+```text
+PDB4 {0,3,5,6}: states=68040 rank_bijective=yes reached=68040 unreached=0 max=8 table_mismatches=0 => PASS
+PDB3 {0,1,2}  : states=5670  rank_bijective=yes reached=5670  unreached=0 max=7 table_mismatches=0 => PASS
+PDB3 {2,5,6}  : states=5670  rank_bijective=yes reached=5670  unreached=0 max=7 table_mismatches=0 => PASS
+```
+
+Because the rank is a bijection and the BFS queue reached exactly $N$ distinct states, every abstract state was visited once, and every linked entry equals its BFS distance.
+
 **H2: PASS.** H4 does not apply: every table stores one `uint8_t` per entry, so there is no packed accessor. Packing to nibbles would cost about five extra instructions per lookup, and the search performs several lookups per expanded node.
 
 ## 12. H3 — Optimality Against Exact BFS
